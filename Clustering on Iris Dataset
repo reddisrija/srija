@@ -1,0 +1,153 @@
+import pandas as pd
+import numpy as np
+from sklearn.cluster import KMeans
+import matplotlib.pyplot as grh
+from sklearn.metrics import silhouette_score
+import seaborn as sns
+from mpl_toolkits.mplot3d import Axes3D
+
+un_sup = pd.read_csv("Task 2.csv")
+un_sup.head()
+un_sup = un_sup.drop(['Id'],axis=1)
+un_sup.keys()
+un_sup.info()
+un_sup.isnull().sum()
+
+cor_grh = un_sup.corr()
+sns.heatmap(cor_grh, annot=True)
+
+setosa = un_sup[un_sup.Species == "Iris-setosa"]
+versicolor = un_sup[un_sup.Species == "Iris-versicolor"]
+virginica = un_sup[un_sup.Species == "Iris-virginica"]
+
+fig, sub = grh.subplots()
+fig.set_size_inches(7,6)
+
+sub.scatter(setosa['SepalLengthCm'],setosa['SepalWidthCm'], color='red')
+sub.scatter(versicolor['SepalLengthCm'],versicolor['SepalWidthCm'], color='blue')
+sub.scatter(virginica['SepalLengthCm'],virginica['SepalWidthCm'], color='green')
+
+sub.set_xlabel("Sepal length cm")
+sub.set_ylabel("Sepal Width cm")
+sub.grid()
+sub.set_title("Iris dataset")
+grh.show()
+
+X = un_sup.iloc[:, 0:2].values
+
+x = un_sup.iloc[:, 0:4].values
+
+from sklearn.cluster import KMeans
+wcss = []
+for i in range(1, 11):
+    kmeans = KMeans(n_clusters = i, init = 'k-means++', 
+                    max_iter = 300, n_init = 10, random_state = 0)
+    kmeans.fit(x)
+    wcss.append(kmeans.inertia_)
+
+grh.plot(range(1, 11), wcss)
+grh.title('The elbow method')
+grh.xlabel('Number of clusters')
+grh.ylabel('WCSS') 
+grh.show()
+
+k_means_X = KMeans(n_clusters = 3, init = 'k-means++', max_iter = 300, n_init = 10, random_state = 42)
+un_sup['cluster'] = k_means_X.fit_predict(X)
+un_sup.head()
+
+centroids = k_means_X.cluster_centers_
+cen_x = [i[0] for i in centroids]
+cen_y = [i[1] for i in centroids]
+
+#adding these into dataframe
+un_sup['cen_x'] = un_sup.cluster.map({0:cen_x[0], 1:cen_x[1], 2:cen_x[2]})
+un_sup['cen_y'] = un_sup.cluster.map({0:cen_y[0], 1:cen_y[1], 2:cen_y[2]})
+
+# mapping the colors
+colour = ['#DF2020', '#81DF20', '#2095DF']
+un_sup['Color'] = un_sup.cluster.map({0:colour[0], 1:colour[1], 2:colour[2]})
+
+colour = ['#DF2020', '#81DF20', '#2095DF']
+
+Y = un_sup.iloc[:, 0:3].values
+
+k_means_Y = KMeans(n_clusters = 3, init = 'k-means++', max_iter = 300, n_init = 10, random_state = 42)
+un_sup['cluster'] = k_means_Y.fit_predict(Y)
+
+un_sup['Color'] = un_sup.cluster.map({0:colour[0], 1:colour[1], 2:colour[2]})
+
+viz = grh.figure(figsize=(23,10))
+rs = viz.add_subplot(131, projection = '3d')
+
+rs.scatter(un_sup.SepalLengthCm, un_sup.SepalWidthCm, un_sup.PetalLengthCm, c = un_sup.Color, s = 15)
+rs.set_xlabel('Sepal Length')
+rs.set_ylabel('Sepal Width')
+rs.set_zlabel('Petal Length')
+grh.show()
+
+from matplotlib.lines import Line2D
+viz, rs = grh.subplots(1, figsize=(18,5))
+grh.scatter(un_sup.SepalLengthCm, un_sup.SepalWidthCm, c=un_sup.Color, alpha=0.6, s=100)
+grh.plot([un_sup.SepalLengthCm.mean()]*2, [0,200], color='black', lw=0.5, linestyle='--')
+grh.xlim(0,60)
+grh.plot([0,200], [un_sup.SepalWidthCm.mean()]*2, color='black', lw=0.5, linestyle='--')
+grh.ylim(0,60)
+
+legend_elements = [Line2D([0], [0], color='black', lw=0.5, linestyle='--', label='Average')]
+
+cluster_leg = [Line2D([0], [0], marker='o', color='w', label='cluster {}'.format(i+1), 
+                      markerfacecolor=mcolor, markersize=5) for i, mcolor in enumerate(colour)]
+
+cent_leg = [Line2D([0], [0], marker='^', color='w', label='Centroid - C{}'.format(i+1), 
+                   markerfacecolor=mcolor, markersize=10) for i, mcolor in enumerate(colour)]
+
+legend_elements.extend(cluster_leg)
+legend_elements.extend(cent_leg)
+grh.legend(handles=legend_elements, loc='upper right',ncol=2)
+grh.title('Iris Dataset Clustering\n', loc = 'center', fontsize=20)
+grh.xlabel('Sepal Length')
+grh.ylabel('Sepal Width')
+grh.show()
+
+viz, rs = grh.subplots(1, figsize=(12,6))
+grh.legend(handles=legend_elements, loc='upper right',ncol=2)
+grh.scatter(un_sup.SepalLengthCm, un_sup.SepalWidthCm, c=un_sup.Color, alpha=0.6, s=50)
+grh.scatter(cen_x, cen_y, marker='^', c=colour, s=70)
+grh.title('Iris Dataset Clustering\n', loc = 'center', fontsize=20)
+grh.xlabel('Sepal Length')
+grh.ylabel('Sepal Width')
+grh.show()
+
+viz, rs = grh.subplots(1, figsize=(12,7))
+
+grh.scatter(un_sup.SepalLengthCm, un_sup.SepalWidthCm, c=un_sup.Color, alpha=0.6, s=20)
+
+for idx, val in un_sup.iterrows():
+    r = [val.SepalLengthCm, val.cen_x,]
+    s = [val.SepalWidthCm, val.cen_y]
+    grh.plot(r, s, c=val.Color, alpha=0.2)
+
+legend_elements = [Line2D([0], [0], marker='o', color='w', label='cluster {}'.format(i+1), 
+                   markerfacecolor=mcolor, markersize=5) for i, mcolor in enumerate(colour)]
+legend_elements.extend([Line2D([0], [0], marker='^', color='w', label='Centroid - C{}'.format(i+1), 
+            markerfacecolor=mcolor, markersize=10) for i, mcolor in enumerate(colour)])
+
+grh.legend(handles=legend_elements, loc='upper right', ncol=2, fontsize=12)
+grh.xlim(0,10)
+grh.ylim(0,10)
+grh.title('Iris Dataset K-Means Clustering\n', loc='center', fontsize=20)
+grh.xlabel('Sepal Length')
+grh.ylabel('Sepal Width')
+
+score = silhouette_score(x, kmeans.labels_, metric='euclidean')
+print('Silhoueteer score: %.3f' % score)
+
+import time
+start = time.time()
+x = 0
+for r in range(1000000):
+    x += 1
+time.sleep(3)
+end = time.time()
+execution = end - start
+print("Execution time:", execution, "seconds." )
